@@ -31,7 +31,7 @@ def setFree(bulb):
 
 def setMeeting(bulb):
     bulb.set_rgb(5, 65, 255)
-    print("Set bulb to \"Meeting\")
+    print("Set bulb to \"Meeting\"")
 
 def setDND(bulb):
     bulb.set_rgb(255, 31, 2)

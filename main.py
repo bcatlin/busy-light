@@ -8,14 +8,31 @@ import time
 import datetime
 import pickle
 import os.path
+import argparse
+
 # Yeelight libs
 from yeelight import discover_bulbs
 from yeelight import Bulb
+
 # Google Calendar libs
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
+
+# Color Constants
+FREE_RED = 0
+FREE_GREEN = 255
+FREE_BLUE = 13
+FREE_RGB = (FREE_RED << 16) | (FREE_GREEN << 8) | FREE_BLUE
+MEETING_RED = 5
+MEETING_GREEN =65 
+MEETING_BLUE = 255
+MEETING_RGB = (MEETING_RED << 16) | (MEETING_GREEN << 8) | MEETING_BLUE
+DND_RED = 255
+DND_GREEN = 31
+DND_BLUE = 2
+DND_RGB = (DND_RED << 16) | (DND_GREEN << 8) | DND_BLUE
 
 
 def printUsageAndExit():
@@ -28,18 +45,57 @@ def printUsageAndExit():
 ##########################################################################
 # Bulb Functions
 ##########################################################################
-def getBulbIP():
+def getBulbs():
     print("Discovering bulbs...")
     bulbs = discover_bulbs()
-    print("Found bulb:")
-    print(json.dumps(bulbs, indent=2, sort_keys=False))
-    ip = bulbs[0]["ip"]
-    #s = 'Bulb IP address: ' + ip
-    #print s
-    print()
-    print("Found bulb at ", ip)
-    #printColor(bulbs)
-    return ip
+    #print("Found bulb:")
+    #print(json.dumps(bulbs, indent=2, sort_keys=False))
+    return bulbs
+
+def printBulbStatus(bulb):
+    print("\n##################################")
+    props = bulb.get_properties()
+
+    # Power State
+    print('# Power State:   ' + props["power"])
+
+    # Color
+    rgb = int(props["rgb"])
+    red = (rgb >> 16) & 0x00ff
+    green = (rgb >> 8) & 0x00ff
+    blue = rgb & 0x00ff
+    print('# RGB Value:     (' + str(red) + ', ' + str(green) + ', ' + str(blue) + ')')
+
+    scene = "(unknown)"
+    if rgb == FREE_RGB:
+        scene = "\"Free\""
+    elif rgb == MEETING_RGB:
+        scene = "\"Meeting\""
+    elif rgb == DND_RGB:
+        scene = "\"Do not Disturb\""
+    print('# Scene:         ' + scene)
+
+    print("##################################")
+
+def setFree(bulb):
+    bulb.turn_on()
+    bulb.set_rgb(FREE_RED, FREE_GREEN, FREE_BLUE)
+    print("Set bulb to \"Free\"")
+
+def setMeeting(bulb):
+    bulb.turn_on()
+    bulb.set_rgb(MEETING_RED, MEETING_GREEN, MEETING_BLUE)
+    print("Set bulb to \"Meeting\"")
+
+def setDND(bulb):
+    bulb.turn_on()
+    bulb.set_rgb(DND_RED, DND_GREEN, DND_BLUE)
+    print("Set bulb to \"Do not disturb\"")
+
+def setOff(bulb):
+    setFree(bulb)
+    bulb.turn_off()
+    print("Turned bulb off")
 
 def dance(bulb):
     print("Dancing...")
@@ -61,31 +117,10 @@ def dance(bulb):
     print("Cycle done")
 
 
-def setFree(bulb):
-    bulb.set_rgb(0, 255, 13)
-    print("Set bulb to \"Free\"")
-
-def setMeeting(bulb):
-    bulb.set_rgb(5, 65, 255)
-    print("Set bulb to \"Meeting\"")
-
-def setDND(bulb):
-    bulb.set_rgb(255, 31, 2)
-    print("Set bulb to \"Do not disturb\"")
-
-def printColor(blob):
-    rgb = int(blob[0]["capabilities"]["rgb"])
-    red = (rgb >> 16) & 0x00ff
-    green = (rgb >> 8) & 0x00ff
-    blue = rgb & 0x00ff
-    #s = 'RGB (' + str(red) + ', ' + str(green) + ', ' + str(blue) + ')'
-    #print s
-    print("RGB (", red, ", ", green, ", ", blue, ")")
-
-
 ##########################################################################
 # Google Calendar Functions
 ##########################################################################
+
 def getGCalService():
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -120,6 +155,35 @@ def getGCalService():
 #print("Number of arguments: ", len(sys.argv), " arguments.")
 #print("Argument List: ", str(sys.argv))
 
+# Usage
+parser = argparse.ArgumentParser(description='Manage your Yeelight as a busy light.')
+parser.add_argument('--status', help='Print status', action='store_true')
+parser.add_argument('--set', help='Set new scene', action='store', choices=["free", "meeting", "dnd", "off"])
+# Parse Args
+args = parser.parse_args()
+
+# Initialize
+bulbs = getBulbs()
+print("Total bulbs: ", len(bulbs))
+ip = bulbs[0]["ip"]
+print("Bulb IP (first bulb): ", ip)
+bulb = Bulb(ip)
+
+if args.set:
+    if args.set == "free":
+        setFree(bulb)
+    elif args.set == "meeting":
+        setMeeting(bulb)
+    elif args.set == "dnd":
+        setDND(bulb)
+    elif args.set == "off":
+        setOff(bulb)
+if args.status:
+    printBulbStatus(bulb)
+
+print("\n\nEXITING....\n\n")
+exit(0)
+
 if (len(sys.argv) == 2):
     # Initialize
     ip = getBulbIP()
@@ -135,6 +199,7 @@ if (len(sys.argv) == 2):
         bulb.turn_off()
     else:
         printUsageAndExit()
+    exit(0)
 
 
 # TEST CODE

@@ -35,16 +35,10 @@ DND_BLUE = 2
 DND_RGB = (DND_RED << 16) | (DND_GREEN << 8) | DND_BLUE
 
 
-def printUsageAndExit():
-    print("Usage:")
-    print(" ", sys.argv[0], "[free|meeting|dnd|off]     -- Set bulb to specified scene.")
-    print("  Note: Calling with no arguments executes test code.")
-    exit(-1)
-
-
 ##########################################################################
 # Bulb Functions
 ##########################################################################
+
 def getBulbs():
     print("Discovering bulbs...")
     bulbs = discover_bulbs()
@@ -152,14 +146,12 @@ def getGCalService():
 # MAIN
 ##########################################################################
 
-#print("Number of arguments: ", len(sys.argv), " arguments.")
-#print("Argument List: ", str(sys.argv))
-
-# Usage
+# Setup Arguments (Usage)
 parser = argparse.ArgumentParser(description='Manage your Yeelight as a busy light.')
+parser.add_argument('--test', help='Run test code', action='store_true')
 parser.add_argument('--status', help='Print status', action='store_true')
 parser.add_argument('--set', help='Set new scene', action='store', choices=["free", "meeting", "dnd", "off"])
-# Parse Args
+# Parse Arguments
 args = parser.parse_args()
 
 # Initialize
@@ -169,7 +161,11 @@ ip = bulbs[0]["ip"]
 print("Bulb IP (first bulb): ", ip)
 bulb = Bulb(ip)
 
-if args.set:
+# Handle Arguments
+if args.status:
+    printBulbStatus(bulb)
+    exit(0)
+elif args.set:
     if args.set == "free":
         setFree(bulb)
     elif args.set == "meeting":
@@ -178,27 +174,7 @@ if args.set:
         setDND(bulb)
     elif args.set == "off":
         setOff(bulb)
-if args.status:
     printBulbStatus(bulb)
-
-print("\n\nEXITING....\n\n")
-exit(0)
-
-if (len(sys.argv) == 2):
-    # Initialize
-    ip = getBulbIP()
-    bulb = Bulb(ip)
-
-    if (sys.argv[1] == "free"):
-        setFree(bulb)
-    elif (sys.argv[1] == "meeting"):
-        setMeeting(bulb)
-    elif (sys.argv[1] == "dnd"):
-        setDND(bulb)
-    elif (sys.argv[1] == "off"):
-        bulb.turn_off()
-    else:
-        printUsageAndExit()
     exit(0)
 
 
